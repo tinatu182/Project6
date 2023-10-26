@@ -1,9 +1,10 @@
 const express = require('express');
+const path = require('path') // used to pathing the app
 const userRouter = require('./routes/user');
+const sauceRouter = require('./routes/sauce');
 const app = express();
 require('./models').init();
-
-app.use(express.json());
+const bodyParser = require('body-parser');
 
 
 app.use((req, res, next) => {
@@ -12,94 +13,15 @@ app.use((req, res, next) => {
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
   next();
 });
-// TODO put this code in the controller
-app.post('/api/auth/login', (reg, res, next) => {
-  console.log(reg.body);
-  res.status(201).json({
-    message: 'Login Successful!'
-  });
-});
-// TODO put this code in the controller
-app.post('/api/auth/signup', (reg, res, next) => {
-  console.log(reg.body);
-  res.status(201).json({
-    message: 'Thing created successfully!'
-  });
-});
-// TODO remove sample code
-app.post('/api/stuff', (reg, res, next) => {
-  console.log(reg.body);
-  res.status(201).json({
-    message: 'Thing created successfully!'
-  });
-});
 
-// app.get('/api/stuff', (req, res, next) => {
-//   const stuff = [
-//     {
-//       _id: 'oeihfzeoi',
-//       title: 'My first thing',
-//       description: 'All of the info about my first thing',
-//       imageUrl: '',
-//       price: 4900,
-//       userId: 'qsomihvqios',
-//     },
-//     {
-//       _id: 'oeihfzeomoihi',
-//       title: 'My second thing',
-//       description: 'All of the info about my second thing',
-//       imageUrl: '',
-//       price: 2900,
-//       userId: 'qsomihvqios',
-//     },
-//   ];
-//   res.status(200).json(stuff);
-// });
-// TODO remove sample code
-app.use('/api/stuff', (req, res, next) => {
-  const stuff = [
-    {
-      _id: 'oeihfzeoi',
-      title: 'My first thing',
-      description: 'All of the info about my first thing',
-      imageUrl: '',
-      price: 4900,
-      userId: 'qsomihvqios',
-    },
-    {
-      _id: 'oeihfzeomoihi',
-      title: 'My second thing',
-      description: 'All of the info about my second thing',
-      imageUrl: '',
-      price: 2900,
-      userId: 'qsomihvqios',
-    },
-  ];
-  res.status(200).json(stuff);
-});
-// TODO move in to controller
-app.get('/api/sauces', (req, res, next) => {
-  const stuff = [
-    {
-      _id: 'oeihfzeoi',
-      title: 'My first thing',
-      description: 'All of the info about my first thing',
-      imageUrl: '',
-      price: 4900,
-      userId: 'qsomihvqios',
-    },
-    {
-      _id: 'oeihfzeomoihi',
-      title: 'My second thing',
-      description: 'All of the info about my second thing',
-      imageUrl: '',
-      price: 2900,
-      userId: 'qsomihvqios',
-    },
-  ];
-  res.status(200).json(stuff);
-});
 
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+
+
+app.use('/api/sauces', sauceRouter);
 app.use('/api/auth', userRouter);
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')))
 
 module.exports = app;
