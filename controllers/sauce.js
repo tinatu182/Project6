@@ -9,7 +9,7 @@ exports.getAllSauces = (req, res) => {
     (sauces) => {
       res.status(200).json(sauces);
     }
-  ) .catch(error => res.status(404).json({ error }))
+  ).catch(error => res.status(404).json({ error }))
 
 }
 
@@ -54,24 +54,89 @@ exports.getSingleSauce = (req, res) => {
     (sauce) => {
       res.status(200).json(sauce);
     }
-  ) .catch(error => res.status(404).json({ error }))
+  ).catch(error => res.status(404).json({ error }))
 }
 
 // Delete single sauce logic
 exports.deleteSauce = (req, res) => {
   Sauce.findOne({ _id: req.params.id })     // Find exactly 1 object in DB
-  .then(sauce => {
-      if(sauce.userId != req.authID) {      // Checking ID match with token incase delete other user
-          res.status(401).json({message: 'Non authorized'})
+    .then(sauce => {
+      if (sauce.userId != req.authID) {      // Checking ID match with token incase delete other user
+        res.status(401).json({ message: 'Non authorized' })
       } else {
-          const filename = sauce.imageUrl.split('/uploads/')[1]    // split URL to get file name
-          fs.unlink(`uploads/${filename}`, () => {                 // Delete file
-              Sauce.deleteOne({_id: req.params.id})                // After delete file then delete object in DB
-              .then(() => {res.status(200).json({message: 'Delete Successful!'})})
-              .catch(error => res.status(401).json({ error }))
-          })
+        const filename = sauce.imageUrl.split('/uploads/')[1]    // split URL to get file name
+        fs.unlink(`uploads/${filename}`, () => {                 // Delete file
+          Sauce.deleteOne({ _id: req.params.id })                // After delete file then delete object in DB
+            .then(() => { res.status(200).json({ message: 'Delete Successful!' }) })
+            .catch(error => res.status(401).json({ error }))
+        })
       }
-  })
-  .catch(error => {res.status(500).json({ error })})
+    })
+    .catch(error => { res.status(500).json({ error }) })
 }
 
+const SauceUpdate = (Sauce, id, sauceObj) => {
+  console.log("sauceObj : ", sauceObj)
+  return Sauce.updateOne({ _id: id }, sauceObj)
+}
+
+// Update / Modify Sauce Logic
+exports.modifySauce = (req, res) => {
+  const sauceObj = req.file ?
+    {
+      ...JSON.parse(req.body.sauce),
+      imageUrl: `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`
+    } : { ...req.body }
+
+  delete sauceObj.userId   // Delete userID so it wont accident change User ID
+
+  Sauce.findOne({ _id: req.params.id })     // Find exactly 1 object in DB
+    .then(sauce => {
+      if (sauce.userId != req.authID) {      // Checking ID match with token incase delete other user
+        res.status(401).json({ message: 'Non authorized' })
+      } else {
+        if (req.file) {
+          const filename = sauce.imageUrl.split('/uploads/')[1]    // split URL to get file name
+          fs.unlink(`uploads/${filename}`, () => {
+            SauceUpdate(Sauce, req.params.id, sauceObj)            // Call Sauce Update helper
+              .then(() => { res.status(200).json({ message: 'Update Successful!' }) })
+              .catch(error => res.status(401).json({ error }))
+          })
+        } else {
+          SauceUpdate(Sauce, req.params.id, sauceObj)            // Call Sauce Update helper
+            .then(() => { res.status(200).json({ message: 'Update Successful!' }) })
+            .catch(error => res.status(401).json({ error }))
+        }
+      }
+    })
+    .catch(error => { res.status(500).json({ error }) })
+}
+
+
+exports.countLikeSauce = (req, res) => {
+  console.log("req.params.id", req.params.id)
+  Sauce.findOne({ _id: req.params.id })
+    .then((sauce) => {
+      console.log("fdshadsadsad", req.body.like)
+      switch (req.body.like) {
+        case 1:
+          const sauceLikeObj = {
+            $inc: { likes: 1 },
+            $push: { usersLiked: req.authID }
+          }
+          SauceUpdate(Sauce, req.params.id, sauceLikeObj)
+            .then(() => { res.status(200).json({ message: 'Update Successful!' }) })
+            .catch(error => { console.log("eroor ", error); res.status(401).json({ error }) })
+        break
+        case -1:
+          const sauceDislikeObj = {
+            $inc: { dislikes: -1 },
+            $push: { usersDisliked: req.authID },
+          }
+          SauceUpdate(Sauce, req.params.id, sauceDislikeObj)
+            .then(() => { res.status(200).json({ message: 'Update Successful!' }) })
+            .catch(error => { console.log("eroor ", error); res.status(401).json({ error }) })
+        break
+      }
+    })
+}

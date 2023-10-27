@@ -11,10 +11,10 @@ const sauceSchema = mongoose.Schema({
     mainPepper: { type: String, required: true},
     heat: { type: Number, required: true},
     userId: { type: String, required: true},
-    usersLiked: { type: Array},
-    usersDisliked: { type: Array},
-    likes: { type: Number},
-    dislikes: { type: Number}
+    usersLiked: { type: [String], required: false },
+    usersDisliked: { type: [String], required: false },
+    likes: { type: Number, required: false},
+    dislikes: { type: Number, required: false}
 });
 
 sauceSchema.plugin(uniqueValidator);
