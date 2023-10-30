@@ -114,29 +114,41 @@ exports.modifySauce = (req, res) => {
 
 
 exports.countLikeSauce = (req, res) => {
-  console.log("req.params.id", req.params.id)
-  Sauce.findOne({ _id: req.params.id })
+  Sauce.findOne({ _id: req.params.id })                          // Look up object with match by ID
     .then((sauce) => {
-      console.log("fdshadsadsad", req.body.like)
+      let sauceObj = [];                                        // create object so it can assign data through switch case
       switch (req.body.like) {
-        case 1:
-          const sauceLikeObj = {
+        case 1:                   // Thumb-up LIKE
+          sauceObj = {
             $inc: { likes: 1 },
             $push: { usersLiked: req.authID }
           }
-          SauceUpdate(Sauce, req.params.id, sauceLikeObj)
-            .then(() => { res.status(200).json({ message: 'Update Successful!' }) })
-            .catch(error => { console.log("eroor ", error); res.status(401).json({ error }) })
-        break
-        case -1:
-          const sauceDislikeObj = {
+          break
+        case -1:                 // Thumb-down DISLIKE
+          sauceObj = {
             $inc: { dislikes: -1 },
             $push: { usersDisliked: req.authID },
           }
-          SauceUpdate(Sauce, req.params.id, sauceDislikeObj)
-            .then(() => { res.status(200).json({ message: 'Update Successful!' }) })
-            .catch(error => { console.log("eroor ", error); res.status(401).json({ error }) })
-        break
+          break
+        case 0:                  // Cancel like or dislike
+          let indexUsers = '';
+          if (req.body.userId in sauce.usersLiked) {
+            sauceObj = {
+              $inc: { likes: -1 },
+              $pull: { usersLiked: req.body.userId }
+            }
+          } else {
+            sauceObj = {
+              $inc: { likes: -1 },
+              $pull: { usersDisliked: req.body.userId }
+            }
+          }
+          break
       }
+
+      // make a call to common code to update monggoDB
+      SauceUpdate(Sauce, req.params.id, sauceObj)
+        .then(() => { res.status(200).json({ message: 'Update Successful!' }) })
+        .catch(error => { console.log("error ", error); res.status(401).json({ error }) })
     })
 }
