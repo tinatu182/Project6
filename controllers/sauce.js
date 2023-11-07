@@ -75,7 +75,7 @@ exports.deleteSauce = (req, res) => {
     .catch(error => { res.status(500).json({ error }) })
 }
 
-const SauceUpdate = (Sauce, id, sauceObj) => {
+const sauceUpdate = (Sauce, id, sauceObj) => {
   console.log("sauceObj : ", sauceObj)
   return Sauce.updateOne({ _id: id }, sauceObj)
 }
@@ -98,12 +98,12 @@ exports.modifySauce = (req, res) => {
         if (req.file) {
           const filename = sauce.imageUrl.split('/uploads/')[1]    // split URL to get file name
           fs.unlink(`uploads/${filename}`, () => {
-            SauceUpdate(Sauce, req.params.id, sauceObj)            // Call Sauce Update helper
+            sauceUpdate(Sauce, req.params.id, sauceObj)            // Call Sauce Update helper
               .then(() => { res.status(200).json({ message: 'Update Successful!' }) })
               .catch(error => res.status(401).json({ error }))
           })
         } else {
-          SauceUpdate(Sauce, req.params.id, sauceObj)            // Call Sauce Update helper
+          sauceUpdate(Sauce, req.params.id, sauceObj)            // Call Sauce Update helper
             .then(() => { res.status(200).json({ message: 'Update Successful!' }) })
             .catch(error => res.status(401).json({ error }))
         }
@@ -116,30 +116,36 @@ exports.modifySauce = (req, res) => {
 exports.countLikeSauce = (req, res) => {
   Sauce.findOne({ _id: req.params.id })                          // Look up object with match by ID
     .then((sauce) => {
-      let sauceObj = [];                                        // create object so it can assign data through switch case
+      // FIXME if sauce is no or undefine return 404
+      let sauceObj;                                        // create object so it can assign data through switch case
       switch (req.body.like) {
-        case 1:                   // Thumb-up LIKE
-          sauceObj = {
-            $inc: { likes: 1 },
-            $push: { usersLiked: req.authID }
+        case 1:
+          // handle user liking sauces
+          if (!sauce.usersLiked.includes(req.body.userId)) {
+            sauceObj = {
+              $inc: { likes: 1 },
+              $push: { usersLiked: req.authID }
+            }
           }
           break
         case -1:                 // Thumb-down DISLIKE
-          sauceObj = {
-            $inc: { dislikes: -1 },
-            $push: { usersDisliked: req.authID },
+          // handle user disliking sauces
+          if (!sauce.usersDisliked.includes(req.body.userId)) {
+            sauceObj = {
+              $inc: { dislikes: 1 },
+              $push: { usersDisliked: req.authID },
+            }
           }
           break
         case 0:                  // Cancel like or dislike
-          let indexUsers = '';
-          if (req.body.userId in sauce.usersLiked) {
+          if (sauce.usersLiked.includes(req.body.userId)) {
             sauceObj = {
               $inc: { likes: -1 },
               $pull: { usersLiked: req.body.userId }
             }
-          } else {
+          } else if (sauce.usersDisliked.includes(req.body.userId)) {
             sauceObj = {
-              $inc: { likes: -1 },
+              $inc: { dislikes: -1 },
               $pull: { usersDisliked: req.body.userId }
             }
           }
@@ -147,7 +153,7 @@ exports.countLikeSauce = (req, res) => {
       }
 
       // make a call to common code to update monggoDB
-      SauceUpdate(Sauce, req.params.id, sauceObj)
+      sauceUpdate(Sauce, req.params.id, sauceObj)
         .then(() => { res.status(200).json({ message: 'Update Successful!' }) })
         .catch(error => { console.log("error ", error); res.status(401).json({ error }) })
     })
